@@ -7,12 +7,13 @@ module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
 
-  homebridge.registerAccessory("homebridge-mcu-lamp", "McuLamp", McuLampAccessory);
+  homebridge.registerAccessory("homebridge-mcu-switch", "McuSwitch", McuSwitchAccessory);
 }
 
-function McuLampAccessory(log, config) {
+function McuSwitchAccessory(log, config) {
   this.log = log;
   this.name = config["name"];
+  this.accessorytype = confi["accessorytype"] || "lamp";
   this.mcuIP = config["ip"];
   this.manufacturer = config["manufacturer"] || "ESP8266 Relay Lamp Switch";
   this.model = config["model"] || "Lamp Relay Switch";
@@ -20,12 +21,12 @@ function McuLampAccessory(log, config) {
   this.firmwarerevision = config["firmwarerevision"] || "1.0.1";
 }
 
-McuLampAccessory.prototype.identify = function(callback) {
+McuSwitchAccessory.prototype.identify = function(callback) {
   this.log('Identify requested!');
   callback();
 };
 
-McuLampAccessory.prototype.getPowerState = function(callback) {
+McuSwitchAccessory.prototype.getPowerState = function(callback) {
   this.log("Getting State");
   request.get({
     url: 'http://' + this.mcuIP + '/status'
@@ -35,7 +36,7 @@ McuLampAccessory.prototype.getPowerState = function(callback) {
   }.bind(this));
 }
 
-McuLampAccessory.prototype.setPowerState = function(state, callback) {
+McuSwitchAccessory.prototype.setPowerState = function(state, callback) {
   var url = state ? "1": "0";
   request.get({
     url: 'http://' + this.mcuIP + '/relay?state=' + url
@@ -44,7 +45,7 @@ McuLampAccessory.prototype.setPowerState = function(state, callback) {
   }.bind(this));
 },
 
-McuLampAccessory.prototype.getServices = function() {
+McuSwitchAccessory.prototype.getServices = function() {
 
   var informationService = new Service.AccessoryInformation();
 
@@ -54,12 +55,25 @@ McuLampAccessory.prototype.getServices = function() {
     .setCharacteristic(Characteristic.SerialNumber, this.serialnumber)
     .setCharacteristic(Characteristic.FirmwareRevision, this.firmwarerevision);
 
-  var lightbulbService = new Service.Lightbulb(this.name);
+  var accessoryService;
+  switch (this.accessorytype) {
+    case "lightbulb":
+        accessoryService = new Service.Lightbulb(this.name);
+        break;
+    case "fan":
+        accessoryService = new Service.Fan(this.name);
+        break;
+    case "outlet":
+        accessoryService = new Service.Outlet(this.name);
+        break;
+    default:
+        accessoryService = new Service.Switch(this.name);
+  }
 
-  lightbulbService
+  accessoryService
     .getCharacteristic(Characteristic.On)
     .on('get', this.getPowerState.bind(this))
     .on('set', this.setPowerState.bind(this));
 
-  return [informationService, lightbulbService];
+  return [informationService, accessoryService];
 }
