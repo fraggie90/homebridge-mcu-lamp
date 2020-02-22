@@ -56,6 +56,6 @@ void handle_relay() {
 
   curstate = state; // Set the current state
   digitalWrite(relay, state); // Set relay state
-  server.send(200, "text/plain",  ((state)?"1":"0")); // Return True / False
+  server.send(200, "text/plain",  ((state)?"true":"false")); // Return True / False
 }
   
